@@ -1,0 +1,13 @@
+import puppeteer from 'puppeteer-core';
+import path from 'node:path';
+const dpr = Number(process.argv[2] || 2);
+const out = process.argv[3] || '/tmp/cmp/dpr.png';
+const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--hide-scrollbars'] });
+const p = await b.newPage();
+await p.setViewport({ width: 320, height: 320, deviceScaleFactor: dpr });
+await new Promise(r=>setTimeout(r,150));
+await p.goto('file://' + path.resolve('dist/index.html') + '?widget&season=1&hour=16.7&zoom=1', { waitUntil:'domcontentloaded', timeout: 25000 });
+await new Promise(r=>setTimeout(r,2500));
+await p.screenshot({ path: out });
+await b.close();
+console.log('->', out);

@@ -1,0 +1,26 @@
+import puppeteer from 'puppeteer-core';
+import path from 'node:path';
+const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--hide-scrollbars'] });
+const p = await b.newPage();
+await p.setViewport({ width: 700, height: 700, deviceScaleFactor: 1 });
+const errs = [];
+p.on('pageerror', e => errs.push(e.message));
+p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+await p.goto('file://' + path.resolve('dist/index.html'), { waitUntil: 'networkidle0' });
+await new Promise(r => setTimeout(r, 900));
+await p.mouse.move(350, 330);
+await new Promise(r => setTimeout(r, 250));
+await p.mouse.move(352, 332);
+await p.mouse.move(354, 334);
+await new Promise(r => setTimeout(r, 350));
+await p.screenshot({ path: 'shots/hover.png' });
+await p.mouse.move(350, 400); await p.mouse.down();
+for (let i = 0; i < 18; i++) { await p.mouse.move(350 + i * 9, 400); await new Promise(r => setTimeout(r, 16)); }
+await p.mouse.up();
+await new Promise(r => setTimeout(r, 700));
+await p.screenshot({ path: 'shots/drag.png' });
+await p.mouse.click(360, 340);
+await new Promise(r => setTimeout(r, 300));
+await p.screenshot({ path: 'shots/click.png' });
+console.log('errors:', errs.length ? errs.slice(0, 5) : 'none');
+await b.close();

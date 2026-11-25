@@ -1,0 +1,40 @@
+{
+  "name": "cactus-card",
+  "version": "1.0.0",
+  "description": "四季漂浮岛 —— 会随真实日期换季的 3D 桌面摆件（Three.js + Electron）",
+  "main": "widget/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:dev": "node build.mjs dev",
+    "widget": "node build.mjs && electron widget/main.cjs",
+    "widget:dev": "node build.mjs dev && electron widget/main.cjs",
+    "widget:shot": "node build.mjs && electron widget/main.cjs --shot",
+    "package": "node build.mjs && node build-widget.mjs",
+    "app": "node build.mjs && node build-widget.mjs && open dist/Cactus.app",
+    "shots": "node tools/shot-matrix2.mjs 1000 assets/matrix",
+    "check": "node tools/probe-err.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "three.js",
+    "webgl",
+    "electron",
+    "desktop-widget",
+    "procedural",
+    "seasonal",
+    "isometric",
+    "diorama"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^25.18.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "esbuild": "^0.28.2"
+  }
+}

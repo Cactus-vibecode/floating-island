@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>Cactus</title>
+<style>
+  :root {
+    --accent: #C4708C;
+    --ink: #23261f;
+    --muted: rgba(35, 38, 31, .40);
+    --hair: rgba(35, 38, 31, .12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: radial-gradient(120% 100% at 50% 8%, #FFFFFF 0%, #FBFAF8 56%, #F1F1EE 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--ink);
+  }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .shelf { position: fixed; left: 0; right: 0; bottom: 0; height: 27%; background: linear-gradient(to top, #ffffff 10%, rgba(255,255,255,.82) 46%, rgba(255,255,255,0) 100%); pointer-events: none; z-index: 1; }
+  .capture .shelf { height: 24%; }
+  .hud { position: fixed; z-index: 2; inset: 0; padding: clamp(20px, 3.6vw, 46px); display: flex; flex-direction: column; pointer-events: none; }
+  .brand { display: flex; align-items: center; gap: clamp(10px, 1.4vw, 16px); }
+  .brand .mark { width: auto; height: clamp(26px, 3.9vw, 34px); color: var(--ink); opacity: .86; display: block; }
+  .brand h1 {
+    margin: 0; font-family: "Didot", "Bodoni 72", "Playfair Display", "Songti SC", Georgia, "Times New Roman", serif;
+    font-weight: 400; font-size: clamp(23px, 4.3vw, 36px); letter-spacing: .2em;
+    color: var(--ink); text-indent: .01em; line-height: .9;
+  }
+  .brand .rule { width: clamp(24px, 5vw, 46px); height: 1px; background: var(--hair); align-self: center; margin-top: 2px; }
+  .bottom { margin-top: auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 10px; }
+  .hint {
+    margin: 0; font-size: 10.5px; letter-spacing: .18em; color: var(--muted);
+    transition: opacity 1.4s ease; white-space: nowrap; padding-bottom: 12px;
+  }
+  .seasons { justify-self: center; display: flex; gap: 14px; pointer-events: auto; padding-bottom: 4px; }
+  .seasons button {
+    position: relative; appearance: none; border: 0; padding: 4px 2px 10px;
+    background: transparent; color: rgba(35, 38, 31, .46); font: inherit;
+    font-size: 13px; letter-spacing: .06em; cursor: pointer;
+    transition: color .55s ease;
+  }
+  .seasons button::after {
+    content: ""; position: absolute; left: 50%; bottom: 0; width: 4px; height: 4px;
+    margin-left: -2px; border-radius: 50%; background: var(--accent);
+    opacity: 0; transform: translateY(3px); transition: opacity .55s ease, transform .55s ease;
+  }
+  .seasons button.on { color: var(--ink); }
+  .seasons button.on::after { opacity: 1; transform: translateY(0); }
+  /* 二维码不做成一张贴纸：白底用 multiply 融进纸面，后面垫一层柔光保证可扫 */
+  .qr { position: relative; justify-self: end; margin: 0 0 2px; pointer-events: auto;
+        display: flex; flex-direction: column; align-items: center; }
+  .qr::before {
+    content: ""; position: absolute; left: 50%; top: 46%; width: 168%; height: 168%;
+    transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
+    background: radial-gradient(circle, rgba(255,255,255,.98) 0%, rgba(255,255,255,.94) 46%, rgba(255,255,255,0) 71%);
+  }
+  .qr img {
+    width: clamp(56px, 8vw, 78px); height: auto; display: block;
+    mix-blend-mode: multiply; filter: contrast(1.06);
+  }
+  .qr figcaption {
+    display: flex; align-items: center; gap: 6px; margin-top: 5px;
+    font-size: 8px; letter-spacing: .22em; color: rgba(35,38,31,.42);
+  }
+  .qr figcaption::before, .qr figcaption::after { content: ""; width: 9px; height: 1px; background: rgba(35,38,31,.18); }
+  .capture .hint { visibility: hidden; }
+  .capture .qr img { width: 74px; }
+  .capture .brand h1 { font-size: 31px; }
+  .capture .seasons { gap: 16px; }
+  #fallback { display: none; }
+  .no-webgl #stage { display: none; }
+  .no-webgl #fallback { display: block; position: fixed; inset: 0; }
+  .no-webgl #fallback svg { width: 100%; height: 100%; }
+  .petal-fall { animation: fall linear infinite; transform-box: fill-box; }
+  @keyframes fall {
+    0% { transform: translate(0, -20px) rotate(0deg); opacity: 0; }
+    10% { opacity: .9; }
+    100% { transform: translate(-40px, 420px) rotate(320deg); opacity: 0; }
+  }
+  @media (max-width: 430px) {
+    .seasons { gap: 11px; }
+    .seasons button { font-size: 12px; }
+    .hint { font-size: 9.5px; letter-spacing: .12em; }
+  }
+  /* ---------- 桌面摆件模式：透明底，只留小岛自己 ---------- */
+  body.widget { background: transparent; }
+  body.widget .shelf, body.widget .hud { display: none; }
+  body.widget #fallback { display: none !important; }
+  #whint {
+    display: none; position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: .14em; color: rgba(28, 30, 25, .40);
+    background: rgba(255, 255, 255, .58); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    padding: 5px 11px; border-radius: 20px; white-space: nowrap;
+    opacity: 1; transition: opacity 1.6s ease; pointer-events: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  body.widget #whint { display: block; }
+  body.clean #whint { display: none; }
+  /* 摆件底部的小拖动手柄：专门用来搬动窗口，和岛身旋转互不干扰 */
+  #grip {
+    display: none; position: fixed; left: 50%; bottom: 9px; z-index: 3;
+    width: 46px; height: 5px; margin-left: -23px; border-radius: 3px;
+    background: rgba(88, 94, 82, .42);
+    box-shadow: 0 0 0 .5px rgba(255, 255, 255, .34), 0 1px 2px rgba(0, 0, 0, .10);
+    cursor: grab; opacity: .42;
+    transition: opacity .28s ease, background .28s ease, transform .18s ease;
+    -webkit-user-select: none; user-select: none;
+  }
+  body.widget #grip { display: block; }
+  body.clean #grip { display: none; }
+  #grip.hot { opacity: .72; background: rgba(78, 84, 72, .62); }
+  #grip.dragging { cursor: grabbing; opacity: .9; transform: scaleX(1.18); }
+  /* 搬动时岛外围的一圈提示：虚线环 + 柔光，深浅桌面都看得见 */
+  #halo {
+    display: none; position: fixed; left: 0; top: 0; z-index: 2; pointer-events: none;
+    border-radius: 50%;
+    /* 外圈白光：深色壁纸上就是靠这层把轮廓"打亮"出来 */
+    box-shadow:
+      0 0 13px 2px rgba(255, 255, 255, .78),
+      0 0 30px 8px rgba(255, 255, 255, .44),
+      0 0 58px 18px rgba(255, 255, 255, .20),
+      inset 0 0 26px rgba(255, 255, 255, .22);
+    opacity: 0; transform: scale(.95);
+    transition: opacity .2s ease, transform .26s cubic-bezier(.2, .7, .3, 1);
+  }
+  /* 白色虚线自己带一圈极细暗边：浅色/纯白桌面上靠暗边显形，深色桌面上靠白线显形 */
+  #halo .ring {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    border: 1.5px dashed rgba(255, 255, 255, .97);
+    filter: drop-shadow(0 0 .7px rgba(8, 12, 7, .95)) drop-shadow(0 0 2px rgba(8, 12, 7, .52));
+  }
+  body.widget #halo { display: block; }
+  body.clean #halo { display: none; }
+  #halo.on { opacity: 1; transform: scale(1); }
+  #halo.on::after {
+    content: ""; position: absolute; inset: -9px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .85);
+    box-shadow: 0 0 16px 4px rgba(255, 255, 255, .50);
+    animation: haloPulse 1.9s ease-out infinite;
+  }
+  @keyframes haloPulse {
+    0% { transform: scale(.985); opacity: .55; }
+    70% { transform: scale(1.045); opacity: 0; }
+    100% { transform: scale(1.045); opacity: 0; }
+  }
+  #haloLabel {
+    display: none; position: fixed; left: 50%; bottom: 42px; z-index: 2; pointer-events: none;
+    transform: translateX(-50%);
+    font-size: 10px; letter-spacing: .2em; white-space: nowrap;
+    color: rgba(38, 42, 34, .62);
+    background: rgba(255, 255, 255, .74); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    padding: 4px 10px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s ease;
+    -webkit-user-select: none; user-select: none;
+  }
+  body.widget #haloLabel { display: block; }
+  body.clean #haloLabel { display: none; }
+  #haloLabel.on { opacity: 1; }
+  /* 夜空：透明窗里不放底色，只飘一弯月亮和几点星，白天整体隐藏 */
+  #nightSky {
+    display: none; position: fixed; inset: 0; z-index: 0;
+    pointer-events: none; opacity: 0;
+    transition: opacity 1.6s ease;
+  }
+  body.widget #nightSky { display: block; }
+  #nightSky .stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #nightSky .moon {
+    position: absolute; right: 9%; top: 7%;
+    width: clamp(16px, 4.6vw, 26px); height: clamp(16px, 4.6vw, 26px);
+    filter: drop-shadow(0 0 2.5px rgba(246, 250, 255, .38)) drop-shadow(0 0 7px rgba(214, 228, 255, .14));
+  }
+</style>
+</head>
+<body>
+<div id="nightSky" aria-hidden="true">
+  <svg class="stars" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <g fill="#FFF6DC">
+      <rect x="14" y="12" width=".5" height=".5" opacity=".75"/>
+      <rect x="27" y="6" width=".4" height=".4" opacity=".55"/>
+      <rect x="38" y="18" width=".45" height=".45" opacity=".62"/>
+      <rect x="52" y="9" width=".55" height=".55" opacity=".8"/>
+      <rect x="63" y="21" width=".4" height=".4" opacity=".5"/>
+      <rect x="72" y="13" width=".5" height=".5" opacity=".68"/>
+      <rect x="83" y="26" width=".4" height=".4" opacity=".45"/>
+      <rect x="90" y="10" width=".55" height=".55" opacity=".72"/>
+      <rect x="8" y="26" width=".4" height=".4" opacity=".48"/>
+      <rect x="20" y="33" width=".45" height=".45" opacity=".58"/>
+      <rect x="33" y="27" width=".4" height=".4" opacity=".5"/>
+      <rect x="45" y="34" width=".5" height=".5" opacity=".66"/>
+      <rect x="58" y="30" width=".4" height=".4" opacity=".44"/>
+      <rect x="68" y="38" width=".45" height=".45" opacity=".55"/>
+      <rect x="79" y="44" width=".4" height=".4" opacity=".42"/>
+      <rect x="93" y="36" width=".45" height=".45" opacity=".5"/>
+      <rect x="5" y="42" width=".4" height=".4" opacity=".4"/>
+      <rect x="24" y="45" width=".38" height=".38" opacity=".38"/>
+    </g>
+  </svg>
+  <svg class="moon" viewBox="0 0 40 40">
+    <defs>
+      <mask id="crescentMask">
+        <rect width="40" height="40" fill="#000"/>
+        <circle cx="18" cy="20" r="13" fill="#fff"/>
+        <circle cx="25" cy="16.5" r="12.4" fill="#000"/>
+      </mask>
+    </defs>
+    <circle cx="18" cy="20" r="13" fill="#F1F5FF" mask="url(#crescentMask)"/>
+  </svg>
+</div>
+<canvas id="stage"></canvas>
+
+<div id="fallback" aria-hidden="true">
+  <svg viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice">
+    <rect width="400" height="700" fill="#FAFAF8"/>
+    <ellipse cx="200" cy="470" rx="150" ry="14" fill="#E8E6E0" opacity=".8"/>
+    <polygon points="62,400 120,350 200,336 282,344 344,378 300,430 210,470 150,448 96,424" fill="#B4B0A6"/>
+    <polygon points="300,430 344,378 318,420 250,458 210,470 262,432" fill="#8F8B82"/>
+    <ellipse cx="200" cy="352" rx="146" ry="24" fill="#5E8A3A"/>
+    <ellipse cx="200" cy="346" rx="146" ry="23" fill="#7FA84E"/>
+    <polygon points="186,262 138,350 240,346" fill="#D3D1C7"/>
+    <polygon points="186,262 240,346 208,344" fill="#B4B2A9"/>
+    <polygon points="252,290 220,344 296,348" fill="#D3D1C7"/>
+    <g fill="#33552F">
+      <polygon points="118,360 110,382 126,382"/><polygon points="140,352 132,376 148,376"/>
+      <polygon points="284,352 276,376 292,376"/><polygon points="308,364 300,388 316,388"/>
+    </g>
+    <g fill="#D98A9E"><circle cx="196" cy="330" r="8"/><circle cx="222" cy="336" r="6"/></g>
+    <g fill="#F2B9CA">
+      <ellipse class="petal-fall" cx="150" cy="200" rx="4" ry="2.4" style="animation-duration:9s;animation-delay:0s"/>
+      <ellipse class="petal-fall" cx="240" cy="180" rx="4" ry="2.4" style="animation-duration:11s;animation-delay:2s"/>
+      <ellipse class="petal-fall" cx="300" cy="240" rx="3.6" ry="2.2" style="animation-duration:10s;animation-delay:4s"/>
+    </g>
+    <text x="34" y="72" font-family="Didot, Bodoni 72, Georgia, serif" font-size="26" letter-spacing="8" fill="#23261f">Cactus</text>
+  </svg>
+</div>
+
+<div class="shelf"></div>
+<div id="whint">拖岛旋转 · 拖底部小横条移动 · 滚轮缩放</div>
+<div id="halo"><span class="ring"></span></div>
+<div id="haloLabel">正在移动 · 松手放下</div>
+<div id="grip" title="拖动这里移动小岛"></div>
+
+<div class="hud">
+  <header class="brand">
+    <svg class="mark" viewBox="0 0 26 30" fill="none" stroke="currentColor" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M13 27.4V6.9"/>
+      <path d="M13 21.2H9.1c-1.7 0-2.7-1-2.7-2.7v-3.3"/>
+      <path d="M13 16.6h4.3c1.7 0 2.7-1 2.7-2.7v-3.6"/>
+      <path d="M9.3 27.4h7.4"/>
+    </svg>
+    <h1>Cactus</h1>
+    <span class="rule"></span>
+  </header>
+  <div class="bottom">
+    <p class="hint" id="hint">拖拽旋转 · 悬停树林</p>
+    <nav class="seasons" id="seasons">
+      <button class="on" data-season="0">春</button>
+      <button data-season="1">夏</button>
+      <button data-season="2">秋</button>
+      <button data-season="3">冬</button>
+    </nav>
+    <figure class="qr">
+      <img id="qrimg" src="__QR__" alt="微信二维码">
+      <figcaption>长按识别</figcaption>
+    </figure>
+  </div>
+</div>
+
+<script>__BUNDLE__</script>
+</body>
+</html>

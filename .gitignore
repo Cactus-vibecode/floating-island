@@ -1,0 +1,27 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+四季漂浮岛.html
+build/frames*/
+build/Cactus.iconset/
+widget/.shot
+
+# 早期离线 three 副本，当前构建直接走 node_modules
+vendor/
+build/three-entry.js
+
+# 出图与素材：由 npm run shots 生成，不入库
+shots/
+assets/matrix/
+
+# 个人素材：二维码、参考图不随仓库分发
+assets/qr.png
+assets/qr_340.png
+assets/qr_small.png
+assets/ref_style.jpg
+
+# 系统与日志
+.DS_Store
+*.log

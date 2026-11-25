@@ -1,0 +1,13 @@
+import puppeteer from 'puppeteer-core';
+import path from 'node:path';
+const target = process.argv[2];
+const out = process.argv[3] || '/tmp/cmp/file.png';
+const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--hide-scrollbars'] });
+const p = await b.newPage();
+p.on('pageerror', (e) => console.log('[err]', String(e).slice(0,160)));
+await p.setViewport({ width: 1100, height: 780, deviceScaleFactor: 1 });
+await p.goto('file://' + path.resolve(target), { waitUntil: 'domcontentloaded', timeout: 25000 });
+await new Promise(r=>setTimeout(r,3000));
+await p.screenshot({ path: out });
+await b.close();
+console.log('->', out);
