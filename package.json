@@ -1,8 +1,19 @@
 {
-  "name": "cactus-card",
+  "name": "floating-island",
   "version": "1.0.0",
   "description": "四季漂浮岛 —— 会随真实日期换季的 3D 桌面摆件（Three.js + Electron）",
   "main": "widget/main.cjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cactus-vibecode/floating-island.git"
+  },
+  "homepage": "https://github.com/Cactus-vibecode/floating-island#readme",
+  "bugs": {
+    "url": "https://github.com/Cactus-vibecode/floating-island/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "node build.mjs",
     "build:dev": "node build.mjs dev",
