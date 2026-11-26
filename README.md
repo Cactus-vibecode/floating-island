@@ -90,6 +90,9 @@ npm run app            # macOS：打包成 dist/Cactus.app 再打开
 
 例：`dist/index.html?widget&clean&season=3&hour=20&zoom=1`
 
+> `hour` 只在出图时用：传了就把时段钉死在这一刻。桌面摆件不传，按系统时钟自己走，
+> 每 `CONFIG.clockMs`（默认 20 秒）重读一次，所以放着不动也会从清晨自然过渡到正午、入夜。
+
 ## 目录结构
 
 ```
@@ -134,7 +137,8 @@ export const CONFIG = {
     falloff: 0.6,        // 边界前后各 0.6 小时做渐变，不是硬切
   },
 
-  pollMs: 5 * 60 * 1000, // 多久检查一次是否跨段
+  pollMs: 5 * 60 * 1000, // 多久检查一次日期是否跨季
+  clockMs: 20 * 1000,    // 多久重读一次时间（决定清晨/正午/夜晚）
   transitionSec: 1.4,    // 换季交叉过渡时长
 };
 ```

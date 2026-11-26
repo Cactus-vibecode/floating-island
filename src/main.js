@@ -12,10 +12,18 @@ import { ParticleField } from './particles.js';
 import { contactShadow } from './textures.js';
 
 const params = new URLSearchParams(location.search);
+// 坑：URLSearchParams.get() 缺失时返回 null，而 Number(null) === 0 是有限数，
+// 会被误当成「0 点 / 0 倍」这种合法值。所以数字参数一律走这里，缺失返回 NaN。
+const numParam = (name) => {
+  const raw = params.get(name);
+  if (raw === null || raw.trim() === '') return NaN;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NaN;
+};
 const CAPTURE = params.has('capture');
 const WIDGET = params.has('widget');
 const CLEAN = params.has('clean');
-const zoomParam = Number(params.get('zoom'));
+const zoomParam = numParam('zoom');
 let zoom = Number.isFinite(zoomParam) && zoomParam > 0 ? Math.min(1.4, Math.max(0.55, zoomParam)) : 1;
 const canvas = document.getElementById('stage');
 if (WIDGET) document.body.classList.add('widget');
@@ -193,8 +201,13 @@ function setOver(next) {
 }
 
 // 真实时间 → 时段光照（清晨 / 正午 / 夜晚），季节用当前插值权重
-const hourParam = Number(params.get('hour'));
-let HOUR = Number.isFinite(hourParam) ? hourParam : new Date().getHours() + new Date().getMinutes() / 60;
+// hour 参数只在出图时用；正常摆件模式走系统时钟，并每 CONFIG.clockMs 刷新一次
+const hourParam = numParam('hour');
+const nowHour = () => {
+  const d = new Date();
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+};
+let HOUR = Number.isFinite(hourParam) ? hourParam : nowHour();
 
 // 预先把 12 套预设里的色值转成 Color，避免每帧 new
 const LIGHT_C = LIGHT.map((s) =>
@@ -283,12 +296,15 @@ function applyDaylight() {
 
 if (WIDGET && widgetAPI) {
   const syncClock = () => {
+    // URL 上显式给了 hour 才冻结（出图/对比用）；正常摆件模式跟着系统时钟走
     if (Number.isFinite(hourParam)) return;
-    HOUR = new Date().getHours() + new Date().getMinutes() / 60;
+    const h = nowHour();
+    if (Math.abs(h - HOUR) < 1 / 120) return; // 变化不到半分钟就不重算
+    HOUR = h;
     applyDaylight();
   };
   // 定时轮询：跨时段边界时能在渐变窗口内平滑过渡
-  setInterval(syncClock, CONFIG.pollMs);
+  setInterval(syncClock, CONFIG.clockMs);
 
   // 季节：跟随设备本地日期。只在「日期真的跨了季」时才自动切，
   // 这样用户手动选过的季节不会被下一次轮询抢回去。

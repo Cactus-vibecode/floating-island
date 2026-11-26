@@ -147,10 +147,14 @@ function createWindow() {
 
   const season = Number.isFinite(forcedSeason) ? forcedSeason : activeSeason();
   currentSeason = season;
-  const hour = new Date().getHours() + new Date().getMinutes() / 60;
 
   const zoom = Number.isFinite(saved.zoom) ? saved.zoom : 1;
-  win.loadFile(PAGE, { query: { widget: '1', season: String(season), hour: String(hour), zoom: String(zoom) } });
+  // 注意：正常模式**不要**传 hour。传了等于把时段钉死在启动那一刻，
+  // 摆件摆一晚上会一直停在夜晚。时段交给渲染端按系统时钟自己走。
+  // 只有截图（.shot 里显式写了 hour）才冻结，方便复现同一张图。
+  const query = { widget: '1', season: String(season), zoom: String(zoom) };
+  if (SHOT && Number.isFinite(shotCfg.hour)) query.hour = String(shotCfg.hour);
+  win.loadFile(PAGE, { query });
 
   win.webContents.setVisualZoomLevelLimits(1, 1);
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
